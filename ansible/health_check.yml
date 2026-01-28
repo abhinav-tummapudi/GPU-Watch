@@ -1,0 +1,18 @@
+- name: Checking GPU Watch Service
+  hosts: gpu_nodes
+  become: false  # Root Access
+
+  tasks:
+    - name: Check if gpu-watch.timer is active
+      shell: |
+        systemctl is-active gpu-watch.timer
+      register: timer_status
+      changed_when: false
+      ignore_errors: true
+    
+    - name: Save to HTML log if not active
+      local_action:
+        module: copy
+        content: "{{ '<h3>' + inventory_hostname + '</h3><pre>Status: ' + timer_status.stdout + '</pre>' }}"
+        dest: "./logs/{{ inventory_hostname }}.html"
+      when: timer_status.stdout != "active"

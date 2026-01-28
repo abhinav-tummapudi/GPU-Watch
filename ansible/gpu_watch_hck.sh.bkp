@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /opt/slurm/prometheus_exporters/gpu-watch/watch-env/bin/activate
+cd /opt/slurm/prometheus_exporters/gpu-watch/ansible/
+mkdir -p logs
+rm -f logs/*.html
+
+# Run Ansible check
+ansible-playbook -i inventory.ini health_check.yml
+
+# Assemble HTML report
+html_file="logs/email_report.html"
+echo "<html><body><h2>gpu-watch.timer Inactive on These Hosts</h2>" > $html_file
+find logs/ -name '*.html' -exec cat {} \; >> $html_file
+echo "</body></html>" >> $html_file
+
+# Send only if any host has issue
+if grep -q "<pre>Status: " "$html_file"; then
+    subject="[ALERT] GPU WATCH Inactive on Some Nodes"
+    sender_mail="atummapu@gmu.edu"
+    html=$(<"$html_file")
+
+    ssh -t hop-amd-1 \
+        "printf 'Subject: $subject\nMIME-Version: 1.0\nX-Priority: 1 (Highest)\nImportance: High\nContent-Type: text/html\n\n$html' | sendmail $sender_mail"
+    echo "Email Sent"
+else
+    echo "gpu-watch.timer is active on all nodes. No email sent."
+fi
+

@@ -1,0 +1,38 @@
+- name: Copy GPU Watch and set up Python venv
+  hosts: gpu_nodes
+  become: false  # Root Access
+  vars:
+    app_dir: "/home/atummapu/gpu-watch"
+    dest_dir: "/opt/slurm/prometheus_exporters/gpu-watch/"
+
+  tasks:
+    - name: Ensuring destination directory exists
+      file:
+        path: "{{ dest_dir }}/"
+        state: directory
+        mode: '0755'
+
+    - name: Copying GPU Watch (with excludes)
+      synchronize:
+        src: "{{ app_dir }}/"
+        dest: "{{ dest_dir }}/"
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=__pycache__"
+          - "--exclude=*.pyc"
+  
+    - name: Creating Python Virtual Environment
+      shell: |
+        source /etc/profile
+        module load gnu10
+        module load python
+        python3 -m venv {{ dest_dir }}/watch-env
+      args:
+        executable: /bin/bash
+        creates: "{{ dest_dir }}/watch-env/bin/activate"
+
+    - name: Upgrading Pip Package
+      command: "{{ dest_dir }}/watch-env/bin/pip install --upgrade pip"
+
+    - name: Installing Pandas in the virtual environment
+      command: "{{ dest_dir }}/watch-env/bin/pip install pandas"

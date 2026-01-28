@@ -1,0 +1,26 @@
+{
+    "gpu_limit": {
+        "1g.10gb": "-10",
+        "2g.20gb": "-10",
+        "3g.40gb": "-10",
+        "A100.80gb": "50",
+	"A100.40gb": "70",
+	"H100.80gb": "80"
+    },
+    "warning": {
+        "time": "10800"
+    },
+    "countdown": {
+	    "warn_timer":{
+		   "hours": "0",
+                   "minutes": "10",
+                   "seconds": "0"
+	    },
+	    "kill_timer": {
+		    "hours": "1", 
+		    "minutes": "0", 
+		    "seconds": "0"
+	    }
+    } 
+}
+

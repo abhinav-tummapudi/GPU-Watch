@@ -1,0 +1,55 @@
+#!/bin/bash
+
+source /opt/slurm/prometheus_exporters/gpu-watch/watch-env/bin/activate
+cd /opt/slurm/prometheus_exporters/gpu-watch/ansible/
+mkdir -p logs
+rm -f logs/*.html
+
+# Run Ansible check
+ansible-playbook -i inventory.ini health_check.yml
+
+# Assemble HTML report in table format
+html_file="logs/email_report.html"
+echo '<html><head>
+<style>
+  body { font-family: Arial, sans-serif; background-color: #111; color: #eee; }
+  h2 { text-align: center; color: #f44336; }
+  table { width: 80%; margin: auto; border-collapse: collapse; background-color: #222; }
+  th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+  th { background-color: #333; }
+  td.inactive { color: #f44336; }
+</style>
+</head><body>
+<h2>gpu-watch.timer Inactive on These Hosts</h2>
+<table>
+<tr><th>Hostname</th><th>Status</th></tr>' > "$html_file"
+
+for f in logs/*.html; do
+  [[ "$f" == *email_report.html ]] && continue
+  host=$(basename "$f" .html)
+  status=$(grep -o 'Status:.*' "$f" | awk '{print $2}')
+  echo "<tr><td>$host</td><td class=\"inactive\">❌ $status</td></tr>" >> "$html_file"
+done
+
+echo "</table></body></html>" >> "$html_file"
+
+# Only send email if any inactive entry is present in final table
+if grep -q "<td class=\"inactive\">" "$html_file"; then
+    subject="[ALERT] GPU WATCH DOWN on Some Nodes"
+    sender_mail="atummapu@gmu.edu"
+    html=$(<"$html_file")
+
+    ssh -T hop-amd-1 "
+      {
+        printf 'Subject: %s\nMIME-Version: 1.0\nX-Priority: 1 (Highest)\nImportance: High\nContent-Type: text/html\n\n' \"$subject\"
+        printf '%s\n' \"$html\"
+      } | sendmail $sender_mail
+    "
+
+    #ssh -t hop-amd-1 \
+    #    "printf 'Subject: $subject\nMIME-Version: 1.0\nX-Priority: 1 (Highest)\nImportance: High\nContent-Type: text/html\n\n$html' | sendmail $sender_mail"
+    echo "Email Sent"
+else
+    echo "gpu-watch.timer is active on all nodes. No email sent."
+fi
+

@@ -1,0 +1,14 @@
+[Unit]
+Description=GPU Watch Job Monitor
+After=network.target
+
+[Service]
+Type=oneshot
+User=atummapu
+WorkingDirectory=/opt/slurm/prometheus_exporters/gpu-watch
+ExecStart=/opt/slurm/prometheus_exporters/gpu-watch/watch-env/bin/python /opt/slurm/prometheus_exporters/gpu-watch/src/main.py --both
+StandardOutput=append:/opt/slurm/prometheus_exporters/gpu-watch/logs/output.log
+StandardError=append:/opt/slurm/prometheus_exporters/gpu-watch/logs/error.log
+
+[Install]
+WantedBy=multi-user.target

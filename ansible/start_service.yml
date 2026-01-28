@@ -1,0 +1,30 @@
+- name: Starting GPU Watch Service
+  hosts: gpu_nodes
+  become: false  # Root Access
+  vars:
+    app_dir: "/home/atummapu/gpu-watch"
+    dest_dir: "/opt/slurm/prometheus_exporters/gpu-watch/"
+
+  tasks:
+    - name: Symlink gpu-watch.service
+      file:
+        src: "{{ dest_dir }}/systemd/gpu-watch.service"
+        dest: "/etc/systemd/system/gpu-watch.service"
+        state: link
+        force: true
+
+    - name: Symlink gpu-watch.timer
+      file:
+        src: "{{ dest_dir }}/systemd/gpu-watch.timer"
+        dest: "/etc/systemd/system/gpu-watch.timer"
+        state: link
+        force: true
+
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+
+    - name: Enable GPU Watch timer
+      command: systemctl enable gpu-watch.timer
+
+    - name: Start GPU Watch timer
+      command: systemctl restart gpu-watch.timer
